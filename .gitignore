@@ -1,0 +1,11 @@
+*.iml
+.idea
+venv
+reward/*
+!reward/reward_sample.py
+logs/*
+docker-build/
+!logs/sample-console-logs/
+*.pickle
+.ipynb_checkpoints
+.vscode/settings.json
