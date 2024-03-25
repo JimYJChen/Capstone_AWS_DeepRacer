@@ -125,7 +125,7 @@ class Reward:
         def projected_time(first_index, closest_index, step_count, times_list):
 
             # Calculate how much time has passed since start
-            current_actual_time = (step_count - 1) / 15
+            current_actual_time = (step_count - 1) / 5
 
             # Calculate which indexes were already passed
             indexes_traveled = indexes_cyclical(first_index, closest_index, len(times_list))
@@ -259,78 +259,79 @@ class Reward:
         reward = 1
 
         ## Reward if car goes close to optimal racing line ##
-        DISTANCE_MULTIPLE = 1
+        DISTANCE_MULTIPLE = 2
         dist = dist_to_racing_line(optimals[0:2], optimals_second[0:2], [x, y])
         distance_reward = max(1e-3, 1 - (dist / (track_width * 0.5)))
         reward += distance_reward * DISTANCE_MULTIPLE
 
         ## Reward if speed is close to optimal speed ##
-        SPEED_DIFF_NO_REWARD = 1
-        SPEED_MULTIPLE = 2
-        speed_diff = abs(optimals[2] - speed)
-        if speed_diff <= SPEED_DIFF_NO_REWARD:
-            # we use quadratic punishment (not linear) bc we're not as confident with the optimal speed
-            # so, we do not punish small deviations from optimal speed
-            speed_reward = (1 - (speed_diff / (SPEED_DIFF_NO_REWARD)) ** 2) ** 2
-        else:
-            speed_reward = 0
-        reward += speed_reward * SPEED_MULTIPLE
-
-        # Reward if less steps
-        REWARD_PER_STEP_FOR_FASTEST_TIME = 1
-        STANDARD_TIME = 8
-        FASTEST_TIME = 7
-        times_list = [row[3] for row in racing_track]
-        projected_time = projected_time(self.first_racingpoint_index, closest_index, steps, times_list)
-        try:
-            steps_prediction = projected_time * 5 + 1
-            reward_prediction = max(1e-3, (-REWARD_PER_STEP_FOR_FASTEST_TIME * (FASTEST_TIME) /
-                                           (STANDARD_TIME - FASTEST_TIME)) * (
-                                            steps_prediction - (STANDARD_TIME * 5 + 1)))
-            steps_reward = min(REWARD_PER_STEP_FOR_FASTEST_TIME, reward_prediction / steps_prediction)
-        except:
-            steps_reward = 0
-        reward += steps_reward
-
-        # Zero reward if obviously wrong direction (e.g. spin)
-        direction_diff = racing_direction_diff(
-            optimals[0:2], optimals_second[0:2], [x, y], heading)
-        if direction_diff > 30:
-            reward = 1e-3
-
-        # Zero reward of obviously too slow
-        speed_diff_zero = optimals[2] - speed
-        if speed_diff_zero > 0.5:
-            reward = 1e-3
-
-        ## Incentive for finishing the lap in less steps ##
-        REWARD_FOR_FASTEST_TIME = 1500  # should be adapted to track length and other rewards
-        STANDARD_TIME = 8 # seconds (time that is easily done by model)
-        FASTEST_TIME = 6  # seconds (best time of 1st place on the track)
+        # SPEED_DIFF_NO_REWARD = 0.5
+        # SPEED_MULTIPLE = 4
+        # speed_diff = abs(optimals[2] - speed)
+        # if speed_diff <= SPEED_DIFF_NO_REWARD:
+        #     # we use quadratic punishment (not linear) bc we're not as confident with the optimal speed
+        #     # so, we do not punish small deviations from optimal speed
+        #     speed_reward = (1 - (speed_diff / (SPEED_DIFF_NO_REWARD)) ** 2) ** 2
+        # else:
+        #     speed_reward = 0
+        # reward += speed_reward * SPEED_MULTIPLE
+        #
+        # # Reward if less steps
+        # REWARD_PER_STEP_FOR_FASTEST_TIME = 2
+        # STANDARD_TIME = 8
+        # FASTEST_TIME = 6
+        # times_list = [row[3] for row in racing_track]
+        # projected_time = projected_time(self.first_racingpoint_index, closest_index, steps, times_list)
+        # try:
+        #     steps_prediction = projected_time * 5 + 1
+        #     reward_prediction = max(1e-3, (-REWARD_PER_STEP_FOR_FASTEST_TIME * (FASTEST_TIME) /
+        #                                    (STANDARD_TIME - FASTEST_TIME)) * (
+        #                                     steps_prediction - (STANDARD_TIME * 5 + 1)))
+        #     steps_reward = min(REWARD_PER_STEP_FOR_FASTEST_TIME, reward_prediction / steps_prediction)
+        # except:
+        #     steps_reward = 0
+        # reward += steps_reward
+        #
+        # # Zero reward if obviously wrong direction (e.g. spin)
+        # direction_diff = racing_direction_diff(
+        #     optimals[0:2], optimals_second[0:2], [x, y], heading)
+        # if direction_diff > 30:
+        #     reward = 1e-3
+        #
+        # # Zero reward of obviously too slow
+        # speed_diff_zero = optimals[2] - speed
+        # if speed_diff_zero > 0.5:
+        #     reward = 1e-3
+        #
+        # ## Incentive for finishing the lap in less steps ##
+        # REWARD_FOR_FASTEST_TIME = 2000  # should be adapted to track length and other rewards
+        # STANDARD_TIME = 8 # seconds (time that is easily done by model)
+        # FASTEST_TIME = 6  # seconds (best time of 1st place on the track)
+        # if progress == 100:
+        #     finish_reward = max(1e-3, (-REWARD_FOR_FASTEST_TIME /
+        #                                    (15 * (STANDARD_TIME - FASTEST_TIME))) * (steps - STANDARD_TIME * 15))
+        # else:
+        #     finish_reward = 0
+        # reward += finish_reward
+        #
+        # ## Zero reward if off track ##
+        # if all_wheels_on_track == False:
+        #     reward = 1e-3
         if progress == 100:
-            finish_reward = max(1e-3, (-REWARD_FOR_FASTEST_TIME /
-                                           (15 * (STANDARD_TIME - FASTEST_TIME))) * (steps - STANDARD_TIME * 15))
-        else:
-            finish_reward = 0
-        reward += finish_reward
-
-        ## Zero reward if off track ##
-        if all_wheels_on_track == False:
-            reward = 1e-3
-
+            reward += 1000
         ####################### VERBOSE #######################
 
-        if self.verbose == True:
-            print("Closest index: %i" % closest_index)
-            print("Distance to racing line: %f" % dist)
-            print("=== Distance reward (w/out multiple): %f ===" % (distance_reward))
-            print("Optimal speed: %f" % optimals[2])
-            print("Speed difference: %f" % speed_diff)
-            print("=== Speed reward (w/out multiple): %f ===" % speed_reward)
-            print("Direction difference: %f" % direction_diff)
-            print("Predicted time: %f" % projected_time)
-            print("=== Steps reward: %f ===" % steps_reward)
-            print("=== Finish reward: %f ===" % finish_reward)
+        # if self.verbose == True:
+        #     print("Closest index: %i" % closest_index)
+        #     print("Distance to racing line: %f" % dist)
+        #     print("=== Distance reward (w/out multiple): %f ===" % (distance_reward))
+        #     print("Optimal speed: %f" % optimals[2])
+        #     print("Speed difference: %f" % speed_diff)
+        #     print("=== Speed reward (w/out multiple): %f ===" % speed_reward)
+        #     print("Direction difference: %f" % direction_diff)
+        #     print("Predicted time: %f" % projected_time)
+        #     print("=== Steps reward: %f ===" % steps_reward)
+        #     print("=== Finish reward: %f ===" % finish_reward)
 
         #################### RETURN REWARD ####################
 
